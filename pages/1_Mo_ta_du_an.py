@@ -1,8 +1,8 @@
 import streamlit as st
-import openai
+import requests
 
-# --- Cấu hình API key ---
-openai.api_key = st.secrets["OPENAI_API_KEY"]  # Khuyến nghị dùng secrets
+# --- Cấu hình API Key từ OpenRouter ---
+OPENROUTER_API_KEY = st.secrets["OPENROUTER_API_KEY"]  # Key kiểu: sk-or-v1-xxxxx
 
 # --- Giao diện ---
 st.set_page_config(page_title="📄 Mô Tả Dự Án", layout="wide")
@@ -43,14 +43,25 @@ boathouse.com Quần áo và thiết bị thể thao nước
 Dưới đây là danh sách URL:
 {urls.strip()}
 """
+
+            headers = {
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Content-Type": "application/json"
+            }
+
+            payload = {
+                "model": "openrouter/deepseek-r1-0528:free",
+                "messages": [
+                    {"role": "user", "content": prompt}
+                ],
+                "temperature": 0.3,
+                "max_tokens": 1500
+            }
+
             try:
-                response = openai.ChatCompletion.create(
-                    model="gpt-3.5-turbo",
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=0.3,
-                    max_tokens=1500,
-                )
-                output = response.choices[0].message.content
+                res = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
+                res.raise_for_status()
+                output = res.json()["choices"][0]["message"]["content"]
                 st.success("✅ Đã hoàn tất.")
                 st.text_area("📋 Kết quả mô tả", value=output, height=400)
             except Exception as e:

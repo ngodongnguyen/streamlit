@@ -59,7 +59,7 @@ Dưới đây là danh sách URL:
             }
 
             try:
-                res = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
+                res = requests.post("https://openrouter.ai/v1/chat/completions", headers=headers, json=payload)
                 res.raise_for_status()
                 output = res.json()["choices"][0]["message"]["content"]
                 st.success("✅ Đã hoàn tất.")

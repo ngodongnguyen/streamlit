@@ -1,13 +1,13 @@
 import streamlit as st
 import requests
 
-# --- Cấu hình API Key từ OpenRouter ---
-OPENROUTER_API_KEY = st.secrets["OPENROUTER_API_KEY"]  # Key kiểu: sk-or-v1-xxxxx
+# --- Cấu hình API Key ---
+OPENROUTER_API_KEY = st.secrets["OPENROUTER_API_KEY"]
 
 # --- Giao diện ---
 st.set_page_config(page_title="📄 Mô Tả Dự Án", layout="wide")
 st.title("📄 Mô Tả Dự Án Từ URL")
-st.caption("Nhập danh sách URL để AI tự động trích xuất mô tả sản phẩm/dịch vụ chính.")
+st.caption("Nhập danh sách URL để AI trích xuất mô tả sản phẩm/dịch vụ chính.")
 
 urls = st.text_area("📥 Nhập danh sách URL (mỗi dòng 1 link):")
 
@@ -34,32 +34,32 @@ Tôi sẽ cung cấp cho bạn một danh sách URL của các dự án hoặc w
 - **Trả về kết quả theo đúng thứ tự URL đã nhập.**
 
 📋 Định dạng đầu ra:
-- Kết quả trả về gồm **2 cột**: `Tên miền` và `Mô tả`, ngăn cách bằng **tab (tab-separated)** để tôi dễ copy vào Google Sheets hoặc Excel.
-- Mỗi dòng đúng chuẩn như ví dụ sau:
+- Kết quả gồm 2 cột: `Tên miền` và `Mô tả`, ngăn cách bằng tab.
 
-arzopa.com Màn hình di động và phụ kiện công nghệ
-boathouse.com Quần áo và thiết bị thể thao nước
-
-Dưới đây là danh sách URL:
 {urls.strip()}
 """
 
             headers = {
                 "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://your-app.streamlit.app",
+                "X-Title": "Mo ta du an"
             }
 
             payload = {
-                "model": "openrouter/deepseek-r1-0528:free",
-                "messages": [
-                    {"role": "user", "content": prompt}
-                ],
+                "model": "openai/gpt-3.5-turbo",  # thử model phổ biến
+                "messages": [{"role": "user", "content": prompt}],
                 "temperature": 0.3,
                 "max_tokens": 1500
             }
 
             try:
                 res = requests.post("https://openrouter.ai/v1/chat/completions", headers=headers, json=payload)
+
+                # Debug nếu lỗi JSON
+                st.code(f"Status code: {res.status_code}")
+                st.code(res.text)
+
                 res.raise_for_status()
                 output = res.json()["choices"][0]["message"]["content"]
                 st.success("✅ Đã hoàn tất.")

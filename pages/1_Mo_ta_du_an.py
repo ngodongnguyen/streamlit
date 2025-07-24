@@ -2,53 +2,60 @@ import streamlit as st
 import google.generativeai as genai
 
 # --- Cấu hình API Key ---
-genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+# Đảm bảo bạn đã thêm GEMINI_API_KEY vào secrets của Streamlit
+try:
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+except Exception as e:
+    st.error(f"Lỗi cấu hình API Key: {e}. Vui lòng kiểm tra lại Streamlit Secrets.")
+    st.stop()
+
 
 # --- Giao diện ---
 st.set_page_config(page_title="📄 Mô Tả Dự Án", layout="wide")
 st.title("📄 Mô Tả Dự Án Từ URL")
 st.caption("Nhập danh sách URL để AI trích xuất mô tả sản phẩm/dịch vụ chính.")
 
-urls = st.text_area("📥 Nhập danh sách URL (mỗi dòng 1 link):")
+urls = st.text_area("📥 Nhập danh sách URL (mỗi dòng 1 link):", height=150)
 
 if st.button("🚀 Phân tích"):
     if not urls.strip():
         st.warning("⚠️ Vui lòng nhập ít nhất 1 URL.")
     else:
         with st.spinner("🔍 Đang phân tích..."):
-
+            # Tạo prompt với hướng dẫn chi tiết
             prompt = f"""
-Bạn là một chuyên gia trong lĩnh vực Affiliate Marketing, có nhiệm vụ phân tích và trích xuất thông tin từ các website.
+Bạn là một chuyên gia trong lĩnh vực Affiliate Marketing.
+Dựa vào kiến thức của bạn về các website sau đây, hãy thực hiện nhiệm vụ sau:
 
-Tôi sẽ cung cấp cho bạn một danh sách URL của các dự án hoặc website.
-
-🎯 Nhiệm vụ của bạn:
-- Truy cập từng website.
-- Tìm hiểu và trích xuất **sản phẩm hoặc dịch vụ chính** mà website đó cung cấp.
-- Trả về **mỗi mô tả dưới dạng 1 câu ngắn, không quá 15 từ**.
+🎯 Nhiệm vụ:
+- Với mỗi website trong danh sách, hãy mô tả **sản phẩm hoặc dịch vụ chính** mà nó cung cấp.
+- Trả về **mỗi mô tả chỉ trong 1 câu ngắn, không quá 15 từ**.
 
 ⚠️ Yêu cầu bắt buộc:
-- **Chỉ sử dụng thông tin chính thức từ trang chủ, trang sản phẩm/dịch vụ, hoặc mô tả dự án.**
-- **Không được suy đoán, không bịa đặt, không dựa vào tên miền hay suy diễn.**
-- **Không được bỏ sót bất kỳ website nào.**
-- **Luôn bắt đầu mỗi mô tả bằng danh từ (không dùng động từ hoặc mô tả cảm tính).**
+- **Chỉ dựa vào kiến thức phổ biến, đáng tin cậy về các trang web này.**
+- **Không suy đoán hoặc bịa đặt thông tin.**
+- **Luôn bắt đầu mỗi mô tả bằng danh từ (ví dụ: "Nền tảng...", "Dịch vụ...", "Công cụ...").**
 - **Trả về kết quả theo đúng thứ tự URL đã nhập.**
+- **Không được bỏ sót bất kỳ website nào.**
 
 📋 Định dạng đầu ra:
-- Kết quả gồm 2 cột: `Tên miền` và `Mô tả`, ngăn cách bằng tab.
+- Kết quả gồm 2 cột: `Tên miền` và `Mô tả`, ngăn cách bằng một dấu tab.
 
+DANH SÁCH URL:
 {urls.strip()}
 """
 
             try:
-                # Chọn mô hình Gemini Pro Vision (Mới)
-                model = genai.get_model("models/gemini-pro-vision")
+                # --- SỬA ĐỔI CHÍNH ---
+                # 1. Chọn mô hình phù hợp cho văn bản (gemini-1.5-flash là lựa chọn tốt, nhanh và rẻ)
+                model = genai.GenerativeModel("gemini-1.5-flash")
 
-                # Tạo nội dung từ mô hình bằng phương thức đúng
-                response = model.generate(prompt)  # Cập nhật phương thức phù hợp
+                # 2. Sử dụng phương thức `generate_content`
+                response = model.generate_content(prompt)
 
                 # Hiển thị kết quả
                 st.success("✅ Đã hoàn tất.")
                 st.text_area("📋 Kết quả mô tả", value=response.text, height=400)
+
             except Exception as e:
-                st.error(f"❌ Lỗi: {e}")
+                st.error(f"❌ Đã xảy ra lỗi khi gọi API của Gemini: {e}")

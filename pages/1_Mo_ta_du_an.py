@@ -41,11 +41,11 @@ Tôi sẽ cung cấp cho bạn một danh sách URL của các dự án hoặc w
 """
 
             try:
-                # Cập nhật mô hình đúng theo tên mô hình mà bạn muốn sử dụng
-                model = genai.get_model("models/gemini-pro-vision")  # Chọn mô hình Gemini Pro Vision
+                # Chọn mô hình Gemini Pro Vision (Mới)
+                model = genai.get_model("models/gemini-pro-vision")
 
-                # Tạo nội dung từ mô hình
-                response = model.generate_content(prompt)
+                # Tạo nội dung từ mô hình bằng phương thức đúng
+                response = model.generate(prompt)  # Cập nhật phương thức phù hợp
 
                 # Hiển thị kết quả
                 st.success("✅ Đã hoàn tất.")

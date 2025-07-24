@@ -2,11 +2,8 @@ import streamlit as st
 import pandas as pd
 import csv
 import os
-import time
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
+import requests
+from bs4 import BeautifulSoup
 
 # --- Giao diện ---
 st.set_page_config(page_title="📁 Tải lên và Kiểm tra Dữ liệu", layout="wide")
@@ -53,66 +50,44 @@ if uploaded_file is not None:
         new_data.to_csv("uppromote_merchants.csv", index=False)
         st.success("Dữ liệu mới đã được xuất ra file `uppromote_merchants.csv`.")
 else:
-    # Nếu không có file tải lên, tự động chạy Selenium để thu thập dữ liệu
+    # Nếu không có file tải lên, tự động chạy requests/BeautifulSoup để thu thập dữ liệu
     st.write("Không có file tải lên, bắt đầu thu thập dữ liệu từ web...")
 
-    # Khởi tạo Selenium
-    chrome_options = Options()
-    chrome_options.add_argument("--disable-gpu")
-    service = Service('C:/chromedriver/chromedriver.exe')
-    driver = webdriver.Chrome(service=service, options=chrome_options)
+    # URL để lấy thông tin từ trang web
+    url = "https://marketplace.uppromote.com/offers/find-offers?page=1&per_page=100&tab=all-offers"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    }
 
-    # Truy cập trang đăng nhập và thu thập dữ liệu
-    login_url = "https://marketplace.uppromote.com/login"
-    driver.get(login_url)
-    time.sleep(5)
+    # Gửi yêu cầu GET đến trang web
+    response = requests.get(url, headers=headers)
 
-    # Điền thông tin tài khoản
-    email_input = driver.find_element(By.XPATH, "//input[@placeholder='Enter your email']")  # Tìm input email
-    email_input.send_keys("nguyen@lldmedia.com")
-    password_input = driver.find_element(By.XPATH, "//input[@placeholder='Enter your password']")  # Tìm input password
-    password_input.send_keys("Ngodongnguyen2004?")
-    login_button = driver.find_element(By.XPATH, "//button/span[text()='Login']")  # Tìm nút Login
-    login_button.click()
-    time.sleep(5)  # Chờ trang load
+    if response.status_code == 200:
+        st.write("Đang thu thập dữ liệu từ trang web...")
 
-    # Tiến hành thu thập dữ liệu từ các trang merchant
-    start_url = "https://marketplace.uppromote.com/offers/find-offers?page=1&per_page=100&tab=all-offers"
-    driver.get(start_url)
-    time.sleep(5)  # Chờ trang load
+        # Phân tích cú pháp HTML bằng BeautifulSoup
+        soup = BeautifulSoup(response.text, 'html.parser')
 
-    # Mở file CSV để ghi
-    output_file = 'uppromote_merchants.csv'
-    with open(output_file, mode='w', newline='', encoding='utf-8') as outfile:
-        writer = csv.writer(outfile)
-        writer.writerow(["Tên thương hiệu", "Hoa hồng"])
+        # Tìm tất cả các thẻ chứa tên thương hiệu và hoa hồng
+        merchant_names = soup.select("div.styles_title__4_7RE")
+        commissions = soup.select("div.styles_productCommissions__aR3Vi span")
 
-        # Lặp qua các trang
-        while True:
-            merchant_names = driver.find_elements(By.CSS_SELECTOR, "div.styles_title__4_7RE")
-            commissions = driver.find_elements(By.CSS_SELECTOR, "div.styles_productCommissions__aR3Vi span")
+        # Mở file CSV để ghi
+        output_file = 'uppromote_merchants.csv'
+        with open(output_file, mode='w', newline='', encoding='utf-8') as outfile:
+            writer = csv.writer(outfile)
+            writer.writerow(["Tên thương hiệu", "Hoa hồng"])
 
+            # Lặp qua các thẻ và ghi dữ liệu vào file CSV
             for name, commission in zip(merchant_names, commissions):
                 try:
-                    merchant_name = name.text.strip()
-                    commission_text = commission.text.strip()
+                    merchant_name = name.get_text(strip=True)
+                    commission_text = commission.get_text(strip=True)
                     writer.writerow([merchant_name, commission_text])
-                    print(f"Đã lấy: {merchant_name} - {commission_text}")
+                    st.write(f"Đã lấy: {merchant_name} - {commission_text}")
                 except Exception as e:
-                    print(f"Lỗi khi xử lý merchant: {e}")
+                    st.write(f"Lỗi khi xử lý merchant: {e}")
 
-            try:
-                next_button = driver.find_element(By.CSS_SELECTOR, "i.fa-angle-right")
-                driver.execute_script("arguments[0].scrollIntoView();", next_button)
-                time.sleep(1)
-                next_button.click()
-                print("Bấm Next...")
-                time.sleep(5)  # Chờ trang mới load
-            except Exception as e:
-                print("Không tìm thấy nút Next nữa. Kết thúc.")
-                break
-
-    driver.quit()
-
-    st.success("Đã thu thập và lưu dữ liệu mới từ trang web vào `uppromote_merchants.csv`.")
-
+        st.success("Đã thu thập và lưu dữ liệu mới từ trang web vào `uppromote_merchants.csv`.")
+    else:
+        st.error("Không thể truy cập trang web, vui lòng thử lại sau.")

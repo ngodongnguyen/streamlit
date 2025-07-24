@@ -2,3 +2,6 @@ streamlit
 pandas
 rapidfuzz
 openai==0.28
+requests
+google-generativeai
+python-dotenv

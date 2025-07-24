@@ -1,8 +1,8 @@
 import streamlit as st
-import requests
+import google.generativeai as genai
 
 # --- Cấu hình API Key ---
-OPENROUTER_API_KEY = st.secrets["OPENROUTER_API_KEY"]
+genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 
 # --- Giao diện ---
 st.set_page_config(page_title="📄 Mô Tả Dự Án", layout="wide")
@@ -16,6 +16,7 @@ if st.button("🚀 Phân tích"):
         st.warning("⚠️ Vui lòng nhập ít nhất 1 URL.")
     else:
         with st.spinner("🔍 Đang phân tích..."):
+
             prompt = f"""
 Bạn là một chuyên gia trong lĩnh vực Affiliate Marketing, có nhiệm vụ phân tích và trích xuất thông tin từ các website.
 
@@ -39,30 +40,10 @@ Tôi sẽ cung cấp cho bạn một danh sách URL của các dự án hoặc w
 {urls.strip()}
 """
 
-            headers = {
-                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                "Content-Type": "application/json",
-                "HTTP-Referer": "https://your-app.streamlit.app",
-                "X-Title": "Mo ta du an"
-            }
-
-            payload = {
-                "model": "openai/gpt-3.5-turbo",  # thử model phổ biến
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.3,
-                "max_tokens": 1500
-            }
-
             try:
-                res = requests.post("https://openrouter.ai/v1/chat/completions", headers=headers, json=payload)
-
-                # Debug nếu lỗi JSON
-                st.code(f"Status code: {res.status_code}")
-                st.code(res.text)
-
-                res.raise_for_status()
-                output = res.json()["choices"][0]["message"]["content"]
+                model = genai.GenerativeModel("gemini-pro")
+                response = model.generate_content(prompt)
                 st.success("✅ Đã hoàn tất.")
-                st.text_area("📋 Kết quả mô tả", value=output, height=400)
+                st.text_area("📋 Kết quả mô tả", value=response.text, height=400)
             except Exception as e:
                 st.error(f"❌ Lỗi: {e}")

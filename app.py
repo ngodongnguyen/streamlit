@@ -3,7 +3,7 @@ import pandas as pd
 from rapidfuzz import fuzz
 
 # --- Cài đặt ---
-threshold = 80
+threshold = 90
 csv_file = "test.csv"
 
 # --- Load CSV ---

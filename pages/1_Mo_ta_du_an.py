@@ -41,8 +41,13 @@ Tôi sẽ cung cấp cho bạn một danh sách URL của các dự án hoặc w
 """
 
             try:
-                model = genai.GenerativeModel("gemini-pro")
+                # Cập nhật mô hình đúng theo tên mô hình mà bạn muốn sử dụng
+                model = genai.get_model("models/gemini-pro-vision")  # Chọn mô hình Gemini Pro Vision
+
+                # Tạo nội dung từ mô hình
                 response = model.generate_content(prompt)
+
+                # Hiển thị kết quả
                 st.success("✅ Đã hoàn tất.")
                 st.text_area("📋 Kết quả mô tả", value=response.text, height=400)
             except Exception as e:

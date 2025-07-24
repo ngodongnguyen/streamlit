@@ -1,7 +1,7 @@
 import streamlit as st
 import google.generativeai as genai
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup # bs4 là module của beautifulsoup4
 from urllib.parse import urlparse
 
 # --- Cấu hình API Key ---

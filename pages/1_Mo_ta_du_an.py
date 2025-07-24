@@ -3,8 +3,10 @@ import google.generativeai as genai
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
+import time # Thêm thư viện time để giới hạn tốc độ truy cập
 
 # --- Cấu hình API Key ---
+# Đảm bảo bạn đã thêm GEMINI_API_KEY vào secrets của Streamlit
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 except Exception as e:
@@ -14,11 +16,19 @@ except Exception as e:
 # --- Hàm hỗ trợ lấy nội dung trang web ---
 def get_website_content(url):
     try:
+        # Thêm nhiều headers để giả lập trình duyệt thật hơn
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'DNT': '1', # Do Not Track request header
         }
-        response = requests.get(url, headers=headers, timeout=10)
-        response.raise_for_status() # Raise an HTTPError for bad responses (4xx or 5xx)
+        # Tăng timeout để tránh lỗi khi trang web phản hồi chậm
+        response = requests.get(url, headers=headers, timeout=15)
+        response.raise_for_status() # Gây ra lỗi HTTPError cho các phản hồi xấu (4xx hoặc 5xx)
         soup = BeautifulSoup(response.text, 'html.parser')
 
         # Lấy văn bản từ các thẻ phổ biến chứa nội dung chính
@@ -41,7 +51,7 @@ def get_website_content(url):
 
         # Giới hạn nội dung để tránh gửi quá nhiều token đến mô hình
         full_content = " ".join(content_parts)
-        return full_content[:8000] # Tăng giới hạn lên 8000 ký tự để có nhiều thông tin hơn
+        return full_content[:8000] # Giới hạn 8000 ký tự đầu tiên để có nhiều thông tin hơn
     except requests.exceptions.RequestException as e:
         st.warning(f"Không thể truy cập hoặc tải nội dung từ {url}: {e}")
         return None
@@ -124,6 +134,8 @@ if st.button("🚀 Phân tích"):
                         results.append(f"{url}\tKhông xác định\tKhông xác định\tKhông xác định\tKhông xác định")
                 else:
                     results.append(f"{url}\tKhông xác định\tKhông xác định\tKhông xác định\tKhông xác định")
+
+                time.sleep(1) # Thêm khoảng dừng 1 giây giữa các yêu cầu để tránh bị chặn
 
         st.success("✅ Đã hoàn tất phân tích.")
         final_output = "\n".join(results)

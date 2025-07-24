@@ -5,89 +5,133 @@ import os
 import requests
 from bs4 import BeautifulSoup
 
-# --- Giao diện ---
-st.set_page_config(page_title="📁 Tải lên và Kiểm tra Dữ liệu", layout="wide")
-st.title("📁 Tải lên và Kiểm tra Dữ liệu Mới")
+# --- Cấu hình giao diện Streamlit ---
+st.set_page_config(page_title="📁 Công cụ Dữ liệu Uppromote", layout="wide")
+st.title("📁 Công cụ Dữ liệu Uppromote: Đào và Kiểm tra")
 
-# Hiển thị nút tải lên file
-uploaded_file = st.file_uploader("Chọn file CSV để tải lên", type=["csv"])
+# Tên file CSV sẽ được sử dụng để lưu trữ dữ liệu
+CSV_FILE_NAME = "uppromote_merchants.csv"
 
-# Kiểm tra nếu người dùng đã tải file lên
-if uploaded_file is not None:
-    # Đọc file CSV tải lên và hiển thị
-    new_data = pd.read_csv(uploaded_file)
-    st.write("Dữ liệu mới đã tải lên:")
-    st.write(new_data)
-
-    # Kiểm tra xem có dữ liệu cũ không
-    if os.path.exists("uppromote_merchants.csv"):
-        st.write("Đang so sánh với dữ liệu cũ...")
-
-        # Đọc dữ liệu cũ từ file CSV
-        old_data = pd.read_csv("uppromote_merchants.csv")
-
-        # Kiểm tra các dữ liệu mới không có trong dữ liệu cũ
-        new_entries = new_data[~new_data.apply(tuple, 1).isin(old_data.apply(tuple, 1))]
-
-        if not new_entries.empty:
-            st.write("Có dữ liệu mới:")
-            st.write(new_entries)
-
-            # Nút để thêm dữ liệu mới vào file cũ
-            if st.button("Thêm dữ liệu mới vào file"):
-                # Thêm dữ liệu mới vào file cũ
-                with open("uppromote_merchants.csv", mode='a', newline='', encoding='utf-8') as file:
-                    writer = csv.writer(file)
-                    for row in new_entries.values:
-                        writer.writerow(row)
-
-                st.success("Dữ liệu mới đã được thêm vào file!")
-        else:
-            st.write("Không có dữ liệu mới.")
-    else:
-        st.write("Không có dữ liệu cũ. Tạo file mới...")
-        # Xuất dữ liệu mới ra một file CSV mới
-        new_data.to_csv("uppromote_merchants.csv", index=False)
-        st.success("Dữ liệu mới đã được xuất ra file `uppromote_merchants.csv`.")
-else:
-    # Nếu không có file tải lên, tự động chạy requests/BeautifulSoup để thu thập dữ liệu
-    st.write("Không có file tải lên, bắt đầu thu thập dữ liệu từ web...")
-
-    # URL để lấy thông tin từ trang web
+# --- Hàm thu thập dữ liệu từ trang web ---
+@st.cache_data(ttl=3600) # Cache dữ liệu đã thu thập trong 1 giờ để tránh gọi lại nhiều lần
+def scrape_data_from_web():
+    """
+    Thu thập tên thương hiệu và hoa hồng từ trang marketplace.uppromote.com.
+    Hiển thị thông báo tiến trình và xử lý lỗi.
+    """
     url = "https://marketplace.uppromote.com/offers/find-offers?page=1&per_page=100&tab=all-offers"
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
     }
 
-    # Gửi yêu cầu GET đến trang web
-    response = requests.get(url, headers=headers)
+    # Sử dụng st.spinner để hiển thị thông báo "đang trong quá trình"
+    with st.spinner("Đang trong quá trình lấy dữ liệu từ web... Vui lòng chờ."):
+        try:
+            response = requests.get(url, headers=headers, timeout=10) # Thêm timeout
+            response.raise_for_status()  # Ném HTTPError cho các phản hồi lỗi (4xx hoặc 5xx)
+            soup = BeautifulSoup(response.text, 'html.parser')
 
-    if response.status_code == 200:
-        st.write("Đang thu thập dữ liệu từ trang web...")
+            # Chọn các thẻ chứa tên thương hiệu và hoa hồng
+            merchant_names = soup.select("div.styles_title__4_7RE")
+            commissions = soup.select("div.styles_productCommissions__aR3Vi span")
 
-        # Phân tích cú pháp HTML bằng BeautifulSoup
-        soup = BeautifulSoup(response.text, 'html.parser')
-
-        # Tìm tất cả các thẻ chứa tên thương hiệu và hoa hồng
-        merchant_names = soup.select("div.styles_title__4_7RE")
-        commissions = soup.select("div.styles_productCommissions__aR3Vi span")
-
-        # Mở file CSV để ghi
-        output_file = 'uppromote_merchants.csv'
-        with open(output_file, mode='w', newline='', encoding='utf-8') as outfile:
-            writer = csv.writer(outfile)
-            writer.writerow(["Tên thương hiệu", "Hoa hồng"])
-
-            # Lặp qua các thẻ và ghi dữ liệu vào file CSV
+            data = []
+            # Lặp qua các thẻ và trích xuất dữ liệu
             for name, commission in zip(merchant_names, commissions):
-                try:
-                    merchant_name = name.get_text(strip=True)
-                    commission_text = commission.get_text(strip=True)
-                    writer.writerow([merchant_name, commission_text])
-                    st.write(f"Đã lấy: {merchant_name} - {commission_text}")
-                except Exception as e:
-                    st.write(f"Lỗi khi xử lý merchant: {e}")
+                merchant_name = name.get_text(strip=True)
+                commission_text = commission.get_text(strip=True)
+                data.append([merchant_name, commission_text])
 
-        st.success("Đã thu thập và lưu dữ liệu mới từ trang web vào `uppromote_merchants.csv`.")
-    else:
-        st.error("Không thể truy cập trang web, vui lòng thử lại sau.")
+            if not data:
+                st.warning("Không tìm thấy dữ liệu nào từ trang web. Có thể cấu trúc trang đã thay đổi.")
+                return pd.DataFrame(columns=["Tên thương hiệu", "Hoa hồng"]) # Trả về DataFrame rỗng
+
+            return pd.DataFrame(data, columns=["Tên thương hiệu", "Hoa hồng"])
+
+        except requests.exceptions.RequestException as e:
+            st.error(f"Lỗi khi truy cập trang web: {e}. Vui lòng kiểm tra kết nối internet hoặc URL.")
+            return None # Trả về None nếu có lỗi mạng
+        except Exception as e:
+            st.error(f"Đã xảy ra lỗi trong quá trình thu thập dữ liệu: {e}")
+            return None # Trả về None nếu có lỗi khác
+
+# --- Logic chính của ứng dụng ---
+
+# Tạo 2 cột để đặt các nút
+col1, col2 = st.columns(2)
+
+with col1:
+    scrape_new_data_button = st.button("Đào dữ liệu mới")
+
+with col2:
+    check_data_button = st.button("Kiểm tra dữ liệu")
+
+# Xử lý khi nút "Đào dữ liệu mới" được nhấn
+if scrape_new_data_button:
+    st.info("Bắt đầu đào dữ liệu mới từ trang web...")
+    scraped_df = scrape_data_from_web() # Gọi hàm thu thập dữ liệu
+
+    if scraped_df is not None: # Chỉ xử lý nếu việc thu thập dữ liệu thành công
+        # Lưu dữ liệu mới vào file CSV, ghi đè nếu file đã tồn tại
+        scraped_df.to_csv(CSV_FILE_NAME, index=False, encoding='utf-8')
+        st.success(f"Đã đào và lưu dữ liệu mới vào file `{CSV_FILE_NAME}` thành công.")
+        st.write("Dữ liệu mới đã đào:")
+        st.write(scraped_df)
+
+# Xử lý khi nút "Kiểm tra dữ liệu" được nhấn
+elif check_data_button:
+    st.info("Bắt đầu kiểm tra dữ liệu...")
+    current_scraped_data = scrape_data_from_web() # Thu thập dữ liệu mới nhất để so sánh
+
+    if current_scraped_data is not None: # Chỉ xử lý nếu việc thu thập dữ liệu thành công
+        if os.path.exists(CSV_FILE_NAME):
+            st.write("Đang so sánh với dữ liệu cũ đã lưu...")
+            try:
+                old_data = pd.read_csv(CSV_FILE_NAME, encoding='utf-8')
+
+                # Đảm bảo các cột của dữ liệu mới và cũ khớp nhau để so sánh chính xác
+                if not current_scraped_data.columns.equals(old_data.columns):
+                    st.warning("Cột dữ liệu mới và cũ không khớp. Không thể so sánh chính xác.")
+                    st.write("Dữ liệu mới (từ web):")
+                    st.write(current_scraped_data)
+                    st.write("Dữ liệu cũ (từ file):")
+                    st.write(old_data)
+                else:
+                    # Tìm các hàng mới không có trong dữ liệu cũ
+                    # Chuyển đổi DataFrame thành tập hợp các tuple để so sánh hiệu quả
+                    new_entries_mask = ~current_scraped_data.apply(tuple, axis=1).isin(old_data.apply(tuple, axis=1))
+                    new_entries = current_scraped_data[new_entries_mask]
+
+                    if not new_entries.empty:
+                        st.write("Có dữ liệu mới được tìm thấy (chưa có trong file cũ):")
+                        st.write(new_entries)
+
+                        # Nút để thêm dữ liệu mới vào file cũ
+                        if st.button("Thêm dữ liệu mới vào file hiện có"):
+                            with open(CSV_FILE_NAME, mode='a', newline='', encoding='utf-8') as file:
+                                writer = csv.writer(file)
+                                # Ghi từng hàng dữ liệu mới vào file
+                                for row in new_entries.values:
+                                    writer.writerow(row)
+                            st.success("Dữ liệu mới đã được thêm vào file thành công!")
+                            st.experimental_rerun() # Chạy lại ứng dụng để cập nhật trạng thái
+                    else:
+                        st.write("Không có dữ liệu mới nào được tìm thấy.")
+            except pd.errors.EmptyDataError:
+                st.warning(f"File `{CSV_FILE_NAME}` trống. Đang tạo file mới với dữ liệu hiện tại.")
+                current_scraped_data.to_csv(CSV_FILE_NAME, index=False, encoding='utf-8')
+                st.success(f"Dữ liệu mới đã được lưu vào file `{CSV_FILE_NAME}`.")
+                st.write("Dữ liệu đã lưu:")
+                st.write(current_scraped_data)
+            except Exception as e:
+                st.error(f"Lỗi khi đọc hoặc xử lý file `{CSV_FILE_NAME}`: {e}")
+        else:
+            st.write(f"Không tìm thấy file `{CSV_FILE_NAME}`. Đang tạo file mới với dữ liệu vừa thu thập...")
+            current_scraped_data.to_csv(CSV_FILE_NAME, index=False, encoding='utf-8')
+            st.success(f"Dữ liệu mới đã được lưu vào file `{CSV_FILE_NAME}`.")
+            st.write("Dữ liệu đã lưu:")
+            st.write(current_scraped_data)
+
+# Thông báo ban đầu khi ứng dụng mới khởi động và chưa có nút nào được nhấn
+if not scrape_new_data_button and not check_data_button:
+    st.info("Vui lòng chọn một tùy chọn để bắt đầu.")

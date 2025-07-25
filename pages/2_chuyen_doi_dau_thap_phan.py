@@ -1,6 +1,7 @@
 # Tệp này sẽ nằm trong thư mục 'pages/' với tên: 2_chuyen_doi_dau_thap_phan.py
 
 import streamlit as st
+from streamlit.components.v1 import html
 
 def convert_and_divide(numbers_str, divisor=25000):
     """
@@ -27,6 +28,37 @@ def convert_and_divide(numbers_str, divisor=25000):
                 converted_numbers.append("Lỗi: Không phải số hợp lệ")
     return "\n".join(converted_numbers)
 
+def copy_button():
+    html("""
+    <script>
+    function copyToClipboard() {
+        var textarea = document.querySelector('textarea[aria-label="Danh sách số với dấu phẩy:"]');
+        if (textarea) {
+            textarea.select();
+            document.execCommand('copy');
+            setTimeout(function() {
+                alert('Đã copy kết quả vào clipboard!');
+            }, 100);
+        } else {
+            alert('Không tìm thấy ô kết quả!');
+        }
+    }
+    </script>
+    <button onclick="copyToClipboard()" style="
+        background-color: #4CAF50;
+        border: none;
+        color: white;
+        padding: 8px 16px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 14px;
+        margin: 4px 2px;
+        cursor: pointer;
+        border-radius: 4px;
+    ">📋 Copy kết quả</button>
+    """)
+
 st.title("Chuyển đổi tiền Việt: Chia cho 25.000 và đổi dấu thập phân sang phẩy")
 
 st.write("Dán danh sách các số tiền Việt của bạn vào ô văn bản dưới đây. Mỗi số nên ở một dòng riêng biệt.")
@@ -34,39 +66,29 @@ st.write("Dán danh sách các số tiền Việt của bạn vào ô văn bản
 # Ô nhập liệu cho người dùng dán danh sách số, không có ví dụ mặc định
 input_numbers = st.text_area("Nhập danh sách số tiền:", height=200, value="", key="input_area")
 
-if st.button("Chuyển đổi"):
+if st.button("Chuyển đổi", type="primary"):
     if input_numbers:
         output_numbers = convert_and_divide(input_numbers)
         st.subheader("Kết quả đã chuyển đổi:")
         st.text_area("Danh sách số với dấu phẩy:", value=output_numbers, height=200, key="output_area")
         
-        # Nút copy sử dụng HTML và JavaScript, chọn textarea thứ hai (index 1)
-        st.markdown("""
-        <button onclick="copyToClipboard()">Copy kết quả</button>
-        <script>
-        function copyToClipboard() {
-            var textareas = document.querySelectorAll('textarea');
-            var textarea = textareas[1];  // Chọn textarea thứ hai (kết quả, index bắt đầu từ 0)
-            if (textarea) {
-                textarea.select();
-                document.execCommand('copy');
-                alert('Đã copy vào clipboard!');
-            } else {
-                alert('Không tìm thấy ô kết quả!');
-            }
-        }
-        </script>
-        """, unsafe_allow_html=True)
+        # Thêm nút copy
+        copy_button()
     else:
         st.warning("Vui lòng nhập danh sách số để chuyển đổi.")
 
 st.markdown("""
 ---
 **Hướng dẫn sử dụng:**
-1. Sao chép danh sách các số tiền của bạn (mỗi số một dòng).
-2. Dán vào ô "Nhập danh sách số tiền:".
-3. Nhấn nút "Chuyển đổi".
-4. Kết quả sẽ hiển thị trong ô "Danh sách số với dấu phẩy:", và bạn có thể nhấn nút "Copy kết quả" để sao chép.
+1. Sao chép danh sách các số tiền của bạn (mỗi số một dòng)
+2. Dán vào ô "Nhập danh sách số tiền:"
+3. Nhấn nút "Chuyển đổi"
+4. Kết quả sẽ hiển thị trong ô "Danh sách số với dấu phẩy:"
+5. Nhấn nút "📋 Copy kết quả" để sao chép
 
-**Lưu ý:** Nếu nút copy vẫn không hoạt động, hãy kiểm tra console trình duyệt (F12) để xem lỗi, hoặc thử reload trang. Đảm bảo chỉ có hai ô textarea trên trang. Nếu có thêm elements, có thể cần điều chỉnh index trong script.
+**Lưu ý:**
+- Nếu dùng trình duyệt Safari, có thể cần cho phép quyền copy
+- Kết quả sẽ được chuyển đổi từ VND sang đơn vị khác bằng cách chia cho 25.000
+- Dấu thập phân sẽ được chuyển từ chấm sang phẩy
+- Các dòng trống sẽ được bỏ qua
 """)

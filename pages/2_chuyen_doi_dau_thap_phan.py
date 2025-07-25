@@ -28,11 +28,16 @@ def convert_and_divide(numbers_str, divisor=25000):
                 converted_numbers.append("Lỗi: Không phải số hợp lệ")
     return "\n".join(converted_numbers)
 
+# Thay thế hàm copy_button() bằng phiên bản mới này
 def copy_button():
     html("""
     <script>
     function copyToClipboard() {
-        var textarea = document.querySelector('textarea[aria-label="Danh sách số với dấu phẩy:"]');
+        // Thử nhiều cách chọn textarea khác nhau
+        var textarea = document.querySelector('textarea[key="output_area"]') || 
+                      document.querySelector('textarea[aria-label*="Danh sách số với dấu phẩy"]') ||
+                      document.querySelectorAll('textarea')[1];
+        
         if (textarea) {
             textarea.select();
             document.execCommand('copy');
@@ -40,7 +45,7 @@ def copy_button():
                 alert('Đã copy kết quả vào clipboard!');
             }, 100);
         } else {
-            alert('Không tìm thấy ô kết quả!');
+            alert('Không tìm thấy ô kết quả! Vui lòng thử bôi đen và copy thủ công.');
         }
     }
     </script>
@@ -58,7 +63,6 @@ def copy_button():
         border-radius: 4px;
     ">📋 Copy kết quả</button>
     """)
-
 st.title("Chuyển đổi tiền Việt: Chia cho 25.000 và đổi dấu thập phân sang phẩy")
 
 st.write("Dán danh sách các số tiền Việt của bạn vào ô văn bản dưới đây. Mỗi số nên ở một dòng riêng biệt.")

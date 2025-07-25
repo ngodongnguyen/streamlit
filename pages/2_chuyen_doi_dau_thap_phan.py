@@ -40,17 +40,20 @@ if st.button("Chuyển đổi"):
         st.subheader("Kết quả đã chuyển đổi:")
         st.text_area("Danh sách số với dấu phẩy:", value=output_numbers, height=200, key="output_area")
         
-        # Nút copy sử dụng HTML và JavaScript, với selector dựa trên key (Streamlit thêm class hoặc id dựa trên key, nhưng dùng querySelector cho label hoặc gần đó)
-        # Để chắc chắn, dùng index, nhưng cải thiện bằng cách chọn textarea cuối cùng
+        # Nút copy sử dụng HTML và JavaScript, chọn textarea thứ hai (index 1)
         st.markdown("""
         <button onclick="copyToClipboard()">Copy kết quả</button>
         <script>
         function copyToClipboard() {
             var textareas = document.querySelectorAll('textarea');
-            var textarea = textareas[textareas.length - 1];  // Chọn textarea cuối cùng (kết quả)
-            textarea.select();
-            document.execCommand('copy');
-            alert('Đã copy vào clipboard!');
+            var textarea = textareas[1];  // Chọn textarea thứ hai (kết quả, index bắt đầu từ 0)
+            if (textarea) {
+                textarea.select();
+                document.execCommand('copy');
+                alert('Đã copy vào clipboard!');
+            } else {
+                alert('Không tìm thấy ô kết quả!');
+            }
         }
         </script>
         """, unsafe_allow_html=True)
@@ -64,5 +67,6 @@ st.markdown("""
 2. Dán vào ô "Nhập danh sách số tiền:".
 3. Nhấn nút "Chuyển đổi".
 4. Kết quả sẽ hiển thị trong ô "Danh sách số với dấu phẩy:", và bạn có thể nhấn nút "Copy kết quả" để sao chép.
-\n\n**Lưu ý:** Nếu nút copy không hoạt động, hãy thử reload trang hoặc đảm bảo trình duyệt cho phép copy clipboard. Nếu vẫn lỗi, có thể do thứ tự elements, thử dùng [1] thay vì [length-1] trong script nếu có nhiều textarea.
+
+**Lưu ý:** Nếu nút copy vẫn không hoạt động, hãy kiểm tra console trình duyệt (F12) để xem lỗi, hoặc thử reload trang. Đảm bảo chỉ có hai ô textarea trên trang. Nếu có thêm elements, có thể cần điều chỉnh index trong script.
 """)

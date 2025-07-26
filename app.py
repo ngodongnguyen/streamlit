@@ -1,37 +1,25 @@
 import streamlit as st
 import pandas as pd
 import gspread
-from oauth2client.file import Storage
-from oauth2client.client import flow_from_clientsecrets
-from oauth2client.tools import run_flow
+from google.oauth2.service_account import Credentials
 from rapidfuzz import fuzz
-import argparse
 
 # --- Cài đặt ---
-SHEET_URL = "https://docs.google.com/spreadsheets/d/1ZIz_KKkpEHAa83je30Q73z6dKWWGicbMQsqM0PKqn3Q"
+SHEET_URL = "https://docs.google.com/spreadsheets/d/1L_-FzunPRvx2Z7VlODivc4xQxaO8Won7nJxRWNq9RUg"
 SHEET_NAME = "Tổng hợp dự án"
-CREDENTIAL_FILE = "client_secret.json"
-TOKEN_FILE = "token.json"
 THRESHOLD = 90  # Độ tương đồng fuzzy để tính là trùng
 
 # --- Hàm xác thực và tải dữ liệu từ Google Sheets ---
 @st.cache_data
 def load_data_from_gsheet():
-    scope = ['https://www.googleapis.com/auth/spreadsheets',
-             'https://www.googleapis.com/auth/drive']
+    scope = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive"
+    ]
 
-    store = Storage(TOKEN_FILE)
-    creds = store.get()
-
-    if not creds or creds.invalid:
-        flow = flow_from_clientsecrets(CREDENTIAL_FILE, scope)
-        flags = argparse.Namespace(
-            auth_host_name='localhost',
-            auth_host_port=[8080, 8090],
-            noauth_local_webserver=False,
-            logging_level='ERROR'
-        )
-        creds = run_flow(flow, store, flags)
+    creds = Credentials.from_service_account_info(
+        st.secrets["google_service_account"], scopes=scope
+    )
 
     gc = gspread.authorize(creds)
     sh = gc.open_by_url(SHEET_URL)

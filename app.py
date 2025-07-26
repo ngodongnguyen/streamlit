@@ -24,8 +24,15 @@ def load_data_from_gsheet():
     gc = gspread.authorize(creds)
     sh = gc.open_by_url(SHEET_URL)
     worksheet = sh.worksheet(SHEET_NAME)
-    data = worksheet.get_all_records()
-    return pd.DataFrame(data)
+    data = worksheet.get_all_values()
+
+    # Dòng 1 là tiêu đề, các dòng sau là dữ liệu
+    if not data:
+        return pd.DataFrame()  # Trống hoàn toàn
+
+    header = data[0]
+    rows = data[1:]
+    return pd.DataFrame(rows, columns=header)
 
 # --- Chuẩn hóa chuỗi ---
 def normalize(text):
@@ -35,13 +42,13 @@ def normalize(text):
 def check_name(target, df):
     target_text = normalize(target)
     for idx, row in df.iterrows():
-        for col in df.columns[:10]:
+        for col in df.columns[:10]:  # chỉ kiểm tra 10 cột đầu
             value = normalize(row[col])
             if not value or value == "nan":
                 continue
             score = fuzz.ratio(value, target_text)
             if score >= THRESHOLD:
-                return ("✔️ Trùng", f"Dòng {idx+1}, Cột {col}")
+                return ("✔️ Trùng", f"Dòng {idx+2}, Cột {col}")  # +2 vì pandas tính từ 0 và bỏ dòng header
     return ("❌ Không trùng", "")
 
 # --- Giao diện Streamlit ---
@@ -58,18 +65,21 @@ if st.button("✅ Kiểm tra"):
         with st.spinner("🔄 Đang tải dữ liệu từ Google Sheet..."):
             df = load_data_from_gsheet()
 
-        target_names = [line.strip() for line in names_input.strip().splitlines() if line.strip()]
-        results = []
+        if df.empty:
+            st.error("❌ Không thể đọc dữ liệu từ Google Sheet (có thể bị trống).")
+        else:
+            target_names = [line.strip() for line in names_input.strip().splitlines() if line.strip()]
+            results = []
 
-        with st.spinner("🔍 Đang kiểm tra trùng tên..."):
-            for name in target_names:
-                status, position = check_name(name, df)
-                results.append({
-                    "Tên kiểm tra": name,
-                    "Kết quả": status,
-                    "Vị trí nếu trùng": position
-                })
+            with st.spinner("🔍 Đang kiểm tra trùng tên..."):
+                for name in target_names:
+                    status, position = check_name(name, df)
+                    results.append({
+                        "Tên kiểm tra": name,
+                        "Kết quả": status,
+                        "Vị trí nếu trùng": position
+                    })
 
-        st.success("✅ Đã kiểm tra xong.")
-        st.markdown("### 📋 Kết quả")
-        st.dataframe(pd.DataFrame(results), use_container_width=True)
+            st.success("✅ Đã kiểm tra xong.")
+            st.markdown("### 📋 Kết quả")
+            st.dataframe(pd.DataFrame(results), use_container_width=True)

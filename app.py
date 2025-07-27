@@ -41,21 +41,31 @@ def normalize(text):
     text = re.sub(r'[^\w\s-]', '', text)
     return text
 
-# --- Chuẩn hóa dữ liệu từ sheet để so sánh nhanh ---
+# --- Tiền xử lý dữ liệu từ sheet, tránh lỗi dtype object ---
 @st.cache_data
 def preprocess_data(df):
     flat_list = []
     pos_map = []
+
+    columns = df.columns.tolist()[:10]  # Chỉ lấy 10 cột đầu theo tên
+
     for idx, row in df.iterrows():
-        for col in df.columns[:10]:
-            val = str(row[col])
-            if val and val.lower() != "nan":
-                normalized = normalize(val)
-                flat_list.append(normalized)
-                pos_map.append((idx + 2, col))
+        for col in columns:
+            try:
+                val = row[col]
+                if pd.isna(val): continue  # Bỏ qua ô rỗng
+
+                val_str = str(val).strip()
+                if val_str and val_str.lower() != "nan":
+                    normalized = normalize(val_str)
+                    flat_list.append(normalized)
+                    pos_map.append((idx + 2, col))  # +2 để tính cả header + index từ 0
+            except Exception as e:
+                st.warning(f"⚠️ Lỗi tại dòng {idx+2}, cột {col}: {e}")
+
     return flat_list, pos_map
 
-# --- So khớp có in chi tiết ---
+# --- Hàm so khớp tên có in debug ---
 def check_name_fast(target, flat_list, pos_map):
     target_text = normalize(target)
 
@@ -94,7 +104,7 @@ def check_name_fast(target, flat_list, pos_map):
     else:
         return ("❌ Không trùng", "", 0, "")
 
-# --- Giao diện ---
+# --- Giao diện chính ---
 st.set_page_config(page_title="Kiểm Tra Trùng Tên", layout="wide")
 st.title("🔍 Kiểm Tra Tên Trùng Trong Google Sheet")
 st.caption("Tìm kiếm tên trùng trong 10 cột đầu của sheet 'Tổng hợp dự án'.")
@@ -112,6 +122,11 @@ if st.button("✅ Kiểm tra"):
             st.error("❌ Không thể đọc dữ liệu từ Google Sheet.")
         else:
             flat_list, pos_map = preprocess_data(df)
+
+            # 🧾 In thử xem dữ liệu sheet có gì bất thường
+            st.markdown("### 🧾 10 dòng đầu trong danh sách Google Sheet đã chuẩn hóa:")
+            st.code("\n".join(flat_list[:10]))
+
             target_names = [line.strip() for line in names_input.strip().splitlines() if line.strip()]
             results = []
 

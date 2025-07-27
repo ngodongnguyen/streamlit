@@ -47,19 +47,26 @@ def preprocess_data(df):
     flat_list = []
     pos_map = []
 
-    columns = df.columns.tolist()[:10]  # Chỉ lấy 10 cột đầu theo tên
+    # Lấy 10 cột đầu, loại bỏ tên cột rỗng hoặc không hợp lệ
+    valid_columns = [col for col in df.columns.tolist()[:10] if col and str(col).strip() != ""]
 
     for idx, row in df.iterrows():
-        for col in columns:
+        for col in valid_columns:
             try:
                 val = row[col]
-                if pd.isna(val): continue  # Bỏ qua ô rỗng
+
+                # Bỏ qua nếu là Series hoặc list (lỗi dữ liệu)
+                if isinstance(val, (list, pd.Series)):
+                    continue
+
+                if pd.isna(val):
+                    continue
 
                 val_str = str(val).strip()
                 if val_str and val_str.lower() != "nan":
                     normalized = normalize(val_str)
                     flat_list.append(normalized)
-                    pos_map.append((idx + 2, col))  # +2 để tính cả header + index từ 0
+                    pos_map.append((idx + 2, col))  # Dòng thực tính từ 1 (header ở dòng 1)
             except Exception as e:
                 st.warning(f"⚠️ Lỗi tại dòng {idx+2}, cột {col}: {e}")
 
@@ -123,8 +130,8 @@ if st.button("✅ Kiểm tra"):
         else:
             flat_list, pos_map = preprocess_data(df)
 
-            # 🧾 In thử xem dữ liệu sheet có gì bất thường
-            st.markdown("### 🧾 10 dòng đầu trong danh sách Google Sheet đã chuẩn hóa:")
+            # 🧾 In thử 10 dòng đầu để debug nếu cần
+            st.markdown("### 🧾 10 chuỗi đầu sau khi chuẩn hóa:")
             st.code("\n".join(flat_list[:10]))
 
             target_names = [line.strip() for line in names_input.strip().splitlines() if line.strip()]

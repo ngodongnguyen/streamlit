@@ -7,7 +7,8 @@ from rapidfuzz import fuzz, process
 # --- Cài đặt ---
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1L_-FzunPRvx2Z7VlODivc4xQxaO8Won7nJxRWNq9RUg"
 SHEET_NAME = "Tổng hợp dự án"
-THRESHOLD = 90  # Ngưỡng fuzzy
+THRESHOLD = 90  # Ngưỡng xác nhận bằng fuzz.ratio
+PRE_FILTER_THRESHOLD = 80  # Ngưỡng lọc sơ bằng partial_ratio
 
 # --- Load dữ liệu từ Google Sheet ---
 @st.cache_data
@@ -30,7 +31,7 @@ def load_data_from_gsheet():
     rows = data[1:]
     return pd.DataFrame(rows, columns=header)
 
-# --- ✅ FIX: Không xóa dấu cách nữa ---
+# --- Không xoá khoảng trắng ---
 def normalize(text):
     return str(text).strip().lower()
 
@@ -48,25 +49,33 @@ def preprocess_data(df):
                 pos_map.append((idx + 2, col))  # Lưu dòng + cột
     return flat_list, pos_map
 
-# --- Kiểm tra từng tên ---
+# --- So khớp tối ưu: partial_ratio lọc nhanh → ratio xác nhận ---
 def check_name_fast(target, flat_list, pos_map):
     target_text = normalize(target)
+
     matches = process.extract(
         query=target_text,
         choices=flat_list,
         scorer=fuzz.partial_ratio,
-        score_cutoff=THRESHOLD,
-        limit=1
+        limit=3
     )
-    if matches:
-        best_match_text, score, _ = matches[0]
-        i = flat_list.index(best_match_text)
-        return (
-            "✔️ Trùng",
-            f"Dòng {pos_map[i][0]}, Cột {pos_map[i][1]}",
-            score,
-            best_match_text
-        )
+
+    best_match = None
+    best_score = 0
+    best_text = ""
+    best_index = -1
+
+    for match_text, partial_score, _ in matches:
+        if partial_score >= PRE_FILTER_THRESHOLD:
+            full_score = fuzz.ratio(target_text, match_text)
+            if full_score > best_score:
+                best_score = full_score
+                best_text = match_text
+                best_index = flat_list.index(match_text)
+
+    if best_score >= THRESHOLD:
+        row, col = pos_map[best_index]
+        return ("✔️ Trùng", f"Dòng {row}, Cột {col}", best_score, best_text)
     else:
         return ("❌ Không trùng", "", 0, "")
 

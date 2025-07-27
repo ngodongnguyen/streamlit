@@ -62,7 +62,7 @@ def preprocess_data(df):
                     flat_list.append(normalized)
                     pos_map.append((idx + 2, col))
             except Exception:
-                pass  # Ẩn lỗi dữ liệu
+                pass  # Ẩn lỗi
 
     return flat_list, pos_map
 
@@ -100,11 +100,7 @@ st.caption("Tìm kiếm tên trùng trong 10 cột đầu của sheet 'Tổng h�
 
 names_input = st.text_area("📥 Nhập danh sách tên cần kiểm tra (mỗi dòng 1 tên):")
 
-col1, col2 = st.columns([1, 4])
-reload = col1.button("🔄 Tải lại dữ liệu")
-run_check = col2.button("✅ Kiểm tra")
-
-if reload or run_check:
+if st.button("✅ Kiểm tra"):
     if not names_input.strip():
         st.warning("⚠️ Vui lòng nhập ít nhất một tên.")
     else:

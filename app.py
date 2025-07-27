@@ -40,7 +40,7 @@ def normalize(text):
     text = re.sub(r'[^\w\s-]', '', text)
     return text
 
-# --- Tiền xử lý dữ liệu từ sheet, tránh lỗi dtype object ---
+# --- Tiền xử lý dữ liệu từ sheet ---
 @st.cache_data
 def preprocess_data(df):
     flat_list = []
@@ -63,39 +63,30 @@ def preprocess_data(df):
                     flat_list.append(normalized)
                     pos_map.append((idx + 2, col))
             except Exception as e:
-                st.warning(f"⚠️ Lỗi tại dòng {idx+2}, cột {col}: {e}")
+                pass  # Ẩn cảnh báo để sạch UI
 
     return flat_list, pos_map
 
-# --- Hàm so khớp dùng token_sort_ratio (chính xác hơn) ---
+# --- Hàm kiểm tra trùng tên (rút gọn, không debug) ---
 def check_name_fast(target, flat_list, pos_map):
     target_text = normalize(target)
 
     matches = process.extract(
         query=target_text,
         choices=flat_list,
-        scorer=fuzz.token_sort_ratio,  # 🔄 So sánh thông minh hơn
+        scorer=fuzz.token_sort_ratio,
         limit=3
     )
 
     best_score = 0
     best_text = ""
     best_index = -1
-    debug_info = []
-
-    st.markdown(f"#### 🔍 Kiểm tra tên: `{target}`")
 
     for match_text, score, _ in matches:
-        line = f"- So với: `{match_text}` → token_sort_ratio: **{score}%**"
         if score > best_score:
             best_score = score
             best_text = match_text
             best_index = flat_list.index(match_text)
-        debug_info.append(line)
-
-    for line in debug_info:
-        st.markdown(line)
-    st.markdown("---")
 
     if best_score >= THRESHOLD:
         row, col = pos_map[best_index]
@@ -103,7 +94,7 @@ def check_name_fast(target, flat_list, pos_map):
     else:
         return ("❌ Không trùng", "", 0, "")
 
-# --- Giao diện chính ---
+# --- Giao diện ---
 st.set_page_config(page_title="Kiểm Tra Trùng Tên", layout="wide")
 st.title("🔍 Kiểm Tra Tên Trùng Trong Google Sheet")
 st.caption("Tìm kiếm tên trùng trong 10 cột đầu của sheet 'Tổng hợp dự án'.")
@@ -121,10 +112,6 @@ if st.button("✅ Kiểm tra"):
             st.error("❌ Không thể đọc dữ liệu từ Google Sheet.")
         else:
             flat_list, pos_map = preprocess_data(df)
-
-            st.markdown("### 🧾 10 chuỗi đầu sau khi chuẩn hóa:")
-            st.code("\n".join(flat_list[:10]))
-
             target_names = [line.strip() for line in names_input.strip().splitlines() if line.strip()]
             results = []
 

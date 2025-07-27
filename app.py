@@ -10,7 +10,7 @@ from rapidfuzz import fuzz, process
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1L_-FzunPRvx2Z7VlODivc4xQxaO8Won7nJxRWNq9RUg"
 SHEET_NAME = "Tổng hợp dự án"
 THRESHOLD = 90  # Ngưỡng xác nhận bằng fuzz.ratio
-PRE_FILTER_THRESHOLD = 80  # Ngưỡng lọc sơ bằng partial_ratio
+PRE_FILTER_THRESHOLD = 60  # Ngưỡng lọc sơ bằng partial_ratio
 
 # --- Load dữ liệu từ Google Sheet ---
 @st.cache_data

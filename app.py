@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import gspread
+import unicodedata
+import re
 from google.oauth2.service_account import Credentials
 from rapidfuzz import fuzz, process
 
@@ -31,9 +33,13 @@ def load_data_from_gsheet():
     rows = data[1:]
     return pd.DataFrame(rows, columns=header)
 
-# --- Không xoá khoảng trắng ---
+# --- Hàm chuẩn hóa mạnh mẽ ---
 def normalize(text):
-    return str(text).strip().lower()
+    text = str(text).lower().strip()
+    text = unicodedata.normalize('NFKC', text)        # Chuẩn hóa Unicode
+    text = re.sub(r'\s+', ' ', text)                  # Gom các loại khoảng trắng về 1
+    text = re.sub(r'[^\w\s-]', '', text)              # Loại ký tự đặc biệt nếu cần
+    return text
 
 # --- Chuẩn hóa dữ liệu từ sheet để so sánh nhanh ---
 @st.cache_data
@@ -41,12 +47,12 @@ def preprocess_data(df):
     flat_list = []
     pos_map = []
     for idx, row in df.iterrows():
-        for col in df.columns[:10]:
-            val = str(row[col]).strip()
+        for col in df.columns[:10]:  # Chỉ lấy 10 cột đầu
+            val = str(row[col])
             if val and val.lower() != "nan":
                 normalized = normalize(val)
                 flat_list.append(normalized)
-                pos_map.append((idx + 2, col))  # Lưu dòng + cột
+                pos_map.append((idx + 2, col))  # Lưu dòng (tính cả header) và cột
     return flat_list, pos_map
 
 # --- So khớp tối ưu: partial_ratio lọc nhanh → ratio xác nhận ---
@@ -60,7 +66,6 @@ def check_name_fast(target, flat_list, pos_map):
         limit=3
     )
 
-    best_match = None
     best_score = 0
     best_text = ""
     best_index = -1

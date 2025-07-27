@@ -11,8 +11,7 @@ SHEET_URL = "https://docs.google.com/spreadsheets/d/1L_-FzunPRvx2Z7VlODivc4xQxaO
 SHEET_NAME = "Tổng hợp dự án"
 THRESHOLD = 90
 
-# --- Load dữ liệu từ Google Sheet ---
-@st.cache_data
+# --- Load dữ liệu từ Google Sheet (không cache) ---
 def load_data_from_gsheet():
     scope = [
         "https://www.googleapis.com/auth/spreadsheets",
@@ -62,12 +61,12 @@ def preprocess_data(df):
                     normalized = normalize(val_str)
                     flat_list.append(normalized)
                     pos_map.append((idx + 2, col))
-            except Exception as e:
-                pass  # Ẩn cảnh báo để sạch UI
+            except Exception:
+                pass  # Ẩn lỗi dữ liệu
 
     return flat_list, pos_map
 
-# --- Hàm kiểm tra trùng tên (rút gọn, không debug) ---
+# --- Hàm kiểm tra trùng tên ---
 def check_name_fast(target, flat_list, pos_map):
     target_text = normalize(target)
 
@@ -101,7 +100,11 @@ st.caption("Tìm kiếm tên trùng trong 10 cột đầu của sheet 'Tổng h�
 
 names_input = st.text_area("📥 Nhập danh sách tên cần kiểm tra (mỗi dòng 1 tên):")
 
-if st.button("✅ Kiểm tra"):
+col1, col2 = st.columns([1, 4])
+reload = col1.button("🔄 Tải lại dữ liệu")
+run_check = col2.button("✅ Kiểm tra")
+
+if reload or run_check:
     if not names_input.strip():
         st.warning("⚠️ Vui lòng nhập ít nhất một tên.")
     else:

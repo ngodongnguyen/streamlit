@@ -10,7 +10,6 @@ from rapidfuzz import fuzz, process
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1L_-FzunPRvx2Z7VlODivc4xQxaO8Won7nJxRWNq9RUg"
 SHEET_NAME = "Tổng hợp dự án"
 THRESHOLD = 90
-PRE_FILTER_THRESHOLD = 80
 
 # --- Load dữ liệu từ Google Sheet ---
 @st.cache_data
@@ -47,18 +46,14 @@ def preprocess_data(df):
     flat_list = []
     pos_map = []
 
-    # Lấy 10 cột đầu, loại bỏ tên cột rỗng hoặc không hợp lệ
     valid_columns = [col for col in df.columns.tolist()[:10] if col and str(col).strip() != ""]
 
     for idx, row in df.iterrows():
         for col in valid_columns:
             try:
                 val = row[col]
-
-                # Bỏ qua nếu là Series hoặc list (lỗi dữ liệu)
                 if isinstance(val, (list, pd.Series)):
                     continue
-
                 if pd.isna(val):
                     continue
 
@@ -66,20 +61,20 @@ def preprocess_data(df):
                 if val_str and val_str.lower() != "nan":
                     normalized = normalize(val_str)
                     flat_list.append(normalized)
-                    pos_map.append((idx + 2, col))  # Dòng thực tính từ 1 (header ở dòng 1)
+                    pos_map.append((idx + 2, col))
             except Exception as e:
                 st.warning(f"⚠️ Lỗi tại dòng {idx+2}, cột {col}: {e}")
 
     return flat_list, pos_map
 
-# --- Hàm so khớp tên có in debug ---
+# --- Hàm so khớp dùng token_sort_ratio (chính xác hơn) ---
 def check_name_fast(target, flat_list, pos_map):
     target_text = normalize(target)
 
     matches = process.extract(
         query=target_text,
         choices=flat_list,
-        scorer=fuzz.partial_ratio,
+        scorer=fuzz.token_sort_ratio,  # 🔄 So sánh thông minh hơn
         limit=3
     )
 
@@ -90,15 +85,12 @@ def check_name_fast(target, flat_list, pos_map):
 
     st.markdown(f"#### 🔍 Kiểm tra tên: `{target}`")
 
-    for match_text, partial_score, _ in matches:
-        line = f"- So với: `{match_text}` → partial_ratio: **{partial_score}%**"
-        if partial_score >= PRE_FILTER_THRESHOLD:
-            full_score = fuzz.ratio(target_text, match_text)
-            line += f" → ratio: **{full_score}%**"
-            if full_score > best_score:
-                best_score = full_score
-                best_text = match_text
-                best_index = flat_list.index(match_text)
+    for match_text, score, _ in matches:
+        line = f"- So với: `{match_text}` → token_sort_ratio: **{score}%**"
+        if score > best_score:
+            best_score = score
+            best_text = match_text
+            best_index = flat_list.index(match_text)
         debug_info.append(line)
 
     for line in debug_info:
@@ -130,7 +122,6 @@ if st.button("✅ Kiểm tra"):
         else:
             flat_list, pos_map = preprocess_data(df)
 
-            # 🧾 In thử 10 dòng đầu để debug nếu cần
             st.markdown("### 🧾 10 chuỗi đầu sau khi chuẩn hóa:")
             st.code("\n".join(flat_list[:10]))
 

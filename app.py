@@ -9,7 +9,7 @@ from rapidfuzz import fuzz, process
 # --- Cài đặt ---
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1L_-FzunPRvx2Z7VlODivc4xQxaO8Won7nJxRWNq9RUg"
 SHEET_NAME = "Tổng hợp dự án"
-THRESHOLD = 90
+THRESHOLD = 80
 
 # --- Load dữ liệu từ Google Sheet (không cache) ---
 def load_data_from_gsheet():

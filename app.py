@@ -9,8 +9,8 @@ from rapidfuzz import fuzz, process
 # --- Cài đặt ---
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1L_-FzunPRvx2Z7VlODivc4xQxaO8Won7nJxRWNq9RUg"
 SHEET_NAME = "Tổng hợp dự án"
-THRESHOLD = 90  # Ngưỡng xác nhận bằng fuzz.ratio
-PRE_FILTER_THRESHOLD = 60  # Ngưỡng lọc sơ bằng partial_ratio
+THRESHOLD = 90
+PRE_FILTER_THRESHOLD = 80
 
 # --- Load dữ liệu từ Google Sheet ---
 @st.cache_data
@@ -36,9 +36,9 @@ def load_data_from_gsheet():
 # --- Hàm chuẩn hóa mạnh mẽ ---
 def normalize(text):
     text = str(text).lower().strip()
-    text = unicodedata.normalize('NFKC', text)        # Chuẩn hóa Unicode
-    text = re.sub(r'\s+', ' ', text)                  # Gom các loại khoảng trắng về 1
-    text = re.sub(r'[^\w\s-]', '', text)              # Loại ký tự đặc biệt nếu cần
+    text = unicodedata.normalize('NFKC', text)
+    text = re.sub(r'\s+', ' ', text)
+    text = re.sub(r'[^\w\s-]', '', text)
     return text
 
 # --- Chuẩn hóa dữ liệu từ sheet để so sánh nhanh ---
@@ -47,15 +47,15 @@ def preprocess_data(df):
     flat_list = []
     pos_map = []
     for idx, row in df.iterrows():
-        for col in df.columns[:10]:  # Chỉ lấy 10 cột đầu
+        for col in df.columns[:10]:
             val = str(row[col])
             if val and val.lower() != "nan":
                 normalized = normalize(val)
                 flat_list.append(normalized)
-                pos_map.append((idx + 2, col))  # Lưu dòng (tính cả header) và cột
+                pos_map.append((idx + 2, col))
     return flat_list, pos_map
 
-# --- So khớp tối ưu: partial_ratio lọc nhanh → ratio xác nhận ---
+# --- So khớp có in chi tiết ---
 def check_name_fast(target, flat_list, pos_map):
     target_text = normalize(target)
 
@@ -69,14 +69,24 @@ def check_name_fast(target, flat_list, pos_map):
     best_score = 0
     best_text = ""
     best_index = -1
+    debug_info = []
+
+    st.markdown(f"#### 🔍 Kiểm tra tên: `{target}`")
 
     for match_text, partial_score, _ in matches:
+        line = f"- So với: `{match_text}` → partial_ratio: **{partial_score}%**"
         if partial_score >= PRE_FILTER_THRESHOLD:
             full_score = fuzz.ratio(target_text, match_text)
+            line += f" → ratio: **{full_score}%**"
             if full_score > best_score:
                 best_score = full_score
                 best_text = match_text
                 best_index = flat_list.index(match_text)
+        debug_info.append(line)
+
+    for line in debug_info:
+        st.markdown(line)
+    st.markdown("---")
 
     if best_score >= THRESHOLD:
         row, col = pos_map[best_index]

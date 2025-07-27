@@ -30,9 +30,9 @@ def load_data_from_gsheet():
     rows = data[1:]
     return pd.DataFrame(rows, columns=header)
 
-# --- Chuẩn hóa chuỗi ---
+# --- ✅ FIX: Không xóa dấu cách nữa ---
 def normalize(text):
-    return str(text).strip().lower().replace(" ", "")
+    return str(text).strip().lower()
 
 # --- Chuẩn hóa dữ liệu từ sheet để so sánh nhanh ---
 @st.cache_data
@@ -91,7 +91,7 @@ if st.button("✅ Kiểm tra"):
             target_names = [line.strip() for line in names_input.strip().splitlines() if line.strip()]
             results = []
 
-            # --- Thêm thanh tiến trình ---
+            # --- Thanh tiến trình ---
             progress_bar = st.progress(0)
             status_text = st.empty()
 

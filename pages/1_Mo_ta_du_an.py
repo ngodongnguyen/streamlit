@@ -16,7 +16,7 @@ def call_groq(prompt, model="mixtral-8x7b-32768"):
     try:
         url = "https://api.groq.com/openai/v1/chat/completions"
         headers = {
-            "Authorization": f"Bearer {st.secrets['GROQ_API_KEY']}",
+            "Authorization": f"Bearer {groq_key}",
             "Content-Type": "application/json"
         }
         data = {
@@ -95,7 +95,6 @@ if st.button("🚀 Phân tích"):
             for url in urls:
                 st.write(f"🔗 Đang xử lý: {url}")
                 content = get_website_content(url)
-                domain = urlparse(url).netloc
 
                 if content:
                     prompt = f"""

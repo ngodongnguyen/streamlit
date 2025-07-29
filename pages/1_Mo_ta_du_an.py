@@ -5,8 +5,10 @@ from urllib.parse import urlparse
 import time
 
 # --- Cấu hình API Key Groq ---
-if "GROQ_API_KEY" not in st.secrets:
-    st.error("❌ Thiếu GROQ_API_KEY trong Streamlit Secrets.")
+groq_key = st.secrets.get("GROQ_API_KEY") or st.secrets.get("api_keys", {}).get("GROQ_API_KEY")
+
+if not groq_key:
+    st.error("❌ Không tìm thấy GROQ_API_KEY trong secrets.")
     st.stop()
 
 # --- Hàm gọi Groq API ---

@@ -94,7 +94,6 @@ def check_name_fast(target, flat_list, pos_map):
         return ("❌ Không trùng", "", 0, "")
 
 # --- Giao diện ---
-st.write("🔑 Các khóa hiện có:", st.secrets.keys())
 st.set_page_config(page_title="Kiểm Tra Trùng Tên", layout="wide")
 st.title("🔍 Kiểm Tra Tên Trùng Trong Google Sheet")
 st.caption("Tìm kiếm tên trùng trong 10 cột đầu của sheet 'Tổng hợp dự án'.")

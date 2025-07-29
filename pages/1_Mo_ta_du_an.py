@@ -12,7 +12,7 @@ if not groq_key:
     st.stop()
 
 # --- Hàm gọi Groq API ---
-def call_groq(prompt, model="mixtral-8x7b-32768"):
+def call_groq(prompt, model="llama3-70b-8192"):  # ✅ Model hiện hành mạnh nhất
     try:
         url = "https://api.groq.com/openai/v1/chat/completions"
         headers = {
@@ -68,7 +68,7 @@ def get_website_content(url):
                 content_parts.append(text)
 
         full_content = " ".join(content_parts)
-        return full_content[:7000]  # giảm còn 7k ký tự
+        return full_content[:7000]
     except Exception as e:
         st.warning(f"⚠️ Lỗi khi truy cập {url}: {e}")
         return None
@@ -94,7 +94,7 @@ if st.button("🚀 Phân tích"):
                 content = get_website_content(url)
 
                 if content:
-                    safe_content = html.unescape(content[:5000])  # giới hạn & unescape
+                    safe_content = html.unescape(content[:5000])
                     prompt = f"""
 Bạn là một chuyên gia phân tích trang web để chọn lọc ngách phù hợp cho affiliate marketing.
 
